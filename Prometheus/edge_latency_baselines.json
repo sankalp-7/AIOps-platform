@@ -1,0 +1,164 @@
+{
+  "checkout->cart": {
+    "source": "checkout",
+    "destination": "cart",
+    "p95_ms": 4.735,
+    "samples": 18,
+    "min_ms": 4.6,
+    "max_ms": 4.737,
+    "mean_ms": 4.72
+  },
+  "checkout->currency": {
+    "source": "checkout",
+    "destination": "currency",
+    "p95_ms": 0.95,
+    "samples": 18,
+    "min_ms": 0.475,
+    "max_ms": 0.962,
+    "mean_ms": 0.924
+  },
+  "checkout->email": {
+    "source": "checkout",
+    "destination": "email",
+    "p95_ms": 9.75,
+    "samples": 18,
+    "min_ms": 9.75,
+    "max_ms": 9.75,
+    "mean_ms": 9.75
+  },
+  "checkout->payment": {
+    "source": "checkout",
+    "destination": "payment",
+    "p95_ms": 9.5,
+    "samples": 17,
+    "min_ms": 4.6,
+    "max_ms": 9.5,
+    "mean_ms": 8.924
+  },
+  "checkout->product-catalog": {
+    "source": "checkout",
+    "destination": "product-catalog",
+    "p95_ms": 9.5,
+    "samples": 18,
+    "min_ms": 4.8,
+    "max_ms": 9.5,
+    "mean_ms": 8.703
+  },
+  "checkout->shipping": {
+    "source": "checkout",
+    "destination": "shipping",
+    "p95_ms": 900.0,
+    "samples": 19,
+    "min_ms": 850.0,
+    "max_ms": 950.0,
+    "mean_ms": 907.895
+  },
+  "frontend->ad": {
+    "source": "frontend",
+    "destination": "ad",
+    "p95_ms": 22.375,
+    "samples": 19,
+    "min_ms": 20.5,
+    "max_ms": 22.75,
+    "mean_ms": 21.855
+  },
+  "frontend->cart": {
+    "source": "frontend",
+    "destination": "cart",
+    "p95_ms": 16.75,
+    "samples": 19,
+    "min_ms": 4.633,
+    "max_ms": 19.562,
+    "mean_ms": 12.751
+  },
+  "frontend->checkout": {
+    "source": "frontend",
+    "destination": "checkout",
+    "p95_ms": 950.0,
+    "samples": 19,
+    "min_ms": 925.0,
+    "max_ms": 975.0,
+    "mean_ms": 953.947
+  },
+  "frontend->currency": {
+    "source": "frontend",
+    "destination": "currency",
+    "p95_ms": 4.839,
+    "samples": 19,
+    "min_ms": 4.583,
+    "max_ms": 4.883,
+    "mean_ms": 4.804
+  },
+  "frontend->product-catalog": {
+    "source": "frontend",
+    "destination": "product-catalog",
+    "p95_ms": 31.25,
+    "samples": 19,
+    "min_ms": 24.812,
+    "max_ms": 33.75,
+    "mean_ms": 30.588
+  },
+  "frontend->recommendation": {
+    "source": "frontend",
+    "destination": "recommendation",
+    "p95_ms": 22.0,
+    "samples": 19,
+    "min_ms": 19.0,
+    "max_ms": 22.3,
+    "mean_ms": 21.568
+  },
+  "frontend->shipping": {
+    "source": "frontend",
+    "destination": "shipping",
+    "p95_ms": 22.75,
+    "samples": 19,
+    "min_ms": 9.75,
+    "max_ms": 23.5,
+    "mean_ms": 20.053
+  },
+  "frontend-proxy->frontend": {
+    "source": "frontend-proxy",
+    "destination": "frontend",
+    "p95_ms": 82.292,
+    "samples": 20,
+    "min_ms": 9.75,
+    "max_ms": 550.0,
+    "mean_ms": 127.263
+  },
+  "frontend-proxy->image-provider": {
+    "source": "frontend-proxy",
+    "destination": "image-provider",
+    "p95_ms": 4.941,
+    "samples": 18,
+    "min_ms": 4.1,
+    "max_ms": 5.55,
+    "mean_ms": 4.98
+  },
+  "load-generator->frontend-proxy": {
+    "source": "load-generator",
+    "destination": "frontend-proxy",
+    "p95_ms": 28541.044,
+    "samples": 20,
+    "min_ms": 28415.094,
+    "max_ms": 28611.354,
+    "mean_ms": 28524.271
+  },
+  "recommendation->product-catalog": {
+    "source": "recommendation",
+    "destination": "product-catalog",
+    "p95_ms": 7.25,
+    "samples": 18,
+    "min_ms": 4.775,
+    "max_ms": 8.125,
+    "mean_ms": 6.965
+  },
+  "shipping->quote": {
+    "source": "shipping",
+    "destination": "quote",
+    "p95_ms": 875.0,
+    "samples": 19,
+    "min_ms": 800.0,
+    "max_ms": 950.0,
+    "mean_ms": 888.816
+  }
+}
