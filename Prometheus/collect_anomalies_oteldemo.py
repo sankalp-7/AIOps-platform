@@ -123,11 +123,12 @@ def valid_business_edge(
     return True
 
 
+# returns latencies of all useful edges
 def fetch_current_edge_latencies() -> dict[str, dict]:
     edges: dict[str, dict] = {}
 
     for result in query_prometheus(P95_LATENCY_QUERY):
-        metric = result.get("metric", {})
+        metric = result.get("metric", {}) # example output - {"metric":{"destination_workload":"checkout","source_workload":"frontend"},"value":[1788352283.730,"48.47005468636529"]}
 
         source = metric.get("source_workload")
         destination = metric.get("destination_workload")
@@ -136,7 +137,7 @@ def fetch_current_edge_latencies() -> dict[str, dict]:
             continue
 
         try:
-            latency_ms = float(result["value"][1])
+            latency_ms = float(result["value"][1]) # value[0] is the timestamp of the retrieved metric
         except (KeyError, IndexError, TypeError, ValueError):
             continue
 

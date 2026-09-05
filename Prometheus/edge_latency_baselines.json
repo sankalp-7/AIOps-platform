@@ -2,163 +2,145 @@
   "checkout->cart": {
     "source": "checkout",
     "destination": "cart",
-    "p95_ms": 4.735,
-    "samples": 18,
-    "min_ms": 4.6,
-    "max_ms": 4.737,
-    "mean_ms": 4.72
+    "p95_ms": 4.7,
+    "samples": 13,
+    "min_ms": 4.647,
+    "max_ms": 4.719,
+    "mean_ms": 4.698
   },
   "checkout->currency": {
     "source": "checkout",
     "destination": "currency",
-    "p95_ms": 0.95,
-    "samples": 18,
-    "min_ms": 0.475,
-    "max_ms": 0.962,
-    "mean_ms": 0.924
+    "p95_ms": 0.498,
+    "samples": 13,
+    "min_ms": 0.493,
+    "max_ms": 0.656,
+    "mean_ms": 0.53
   },
   "checkout->email": {
     "source": "checkout",
     "destination": "email",
-    "p95_ms": 9.75,
-    "samples": 18,
-    "min_ms": 9.75,
-    "max_ms": 9.75,
-    "mean_ms": 9.75
+    "p95_ms": 4.938,
+    "samples": 13,
+    "min_ms": 4.909,
+    "max_ms": 5.188,
+    "mean_ms": 5.005
   },
   "checkout->payment": {
     "source": "checkout",
     "destination": "payment",
-    "p95_ms": 9.5,
-    "samples": 17,
-    "min_ms": 4.6,
-    "max_ms": 9.5,
-    "mean_ms": 8.924
+    "p95_ms": 3.6,
+    "samples": 13,
+    "min_ms": 2.829,
+    "max_ms": 4.186,
+    "mean_ms": 3.64
   },
   "checkout->product-catalog": {
     "source": "checkout",
     "destination": "product-catalog",
-    "p95_ms": 9.5,
-    "samples": 18,
-    "min_ms": 4.8,
-    "max_ms": 9.5,
-    "mean_ms": 8.703
+    "p95_ms": 4.656,
+    "samples": 13,
+    "min_ms": 4.631,
+    "max_ms": 4.692,
+    "mean_ms": 4.657
   },
   "checkout->shipping": {
     "source": "checkout",
     "destination": "shipping",
-    "p95_ms": 900.0,
-    "samples": 19,
-    "min_ms": 850.0,
-    "max_ms": 950.0,
-    "mean_ms": 907.895
+    "p95_ms": 4.474,
+    "samples": 13,
+    "min_ms": 4.455,
+    "max_ms": 4.515,
+    "mean_ms": 4.481
   },
   "frontend->ad": {
     "source": "frontend",
     "destination": "ad",
-    "p95_ms": 22.375,
-    "samples": 19,
-    "min_ms": 20.5,
-    "max_ms": 22.75,
-    "mean_ms": 21.855
+    "p95_ms": 4.718,
+    "samples": 13,
+    "min_ms": 4.66,
+    "max_ms": 4.79,
+    "mean_ms": 4.715
   },
   "frontend->cart": {
     "source": "frontend",
     "destination": "cart",
-    "p95_ms": 16.75,
-    "samples": 19,
-    "min_ms": 4.633,
-    "max_ms": 19.562,
-    "mean_ms": 12.751
+    "p95_ms": 3.886,
+    "samples": 13,
+    "min_ms": 3.753,
+    "max_ms": 4.108,
+    "mean_ms": 3.892
   },
   "frontend->checkout": {
     "source": "frontend",
     "destination": "checkout",
-    "p95_ms": 950.0,
-    "samples": 19,
-    "min_ms": 925.0,
-    "max_ms": 975.0,
-    "mean_ms": 953.947
+    "p95_ms": 80.75,
+    "samples": 13,
+    "min_ms": 70.417,
+    "max_ms": 89.167,
+    "mean_ms": 79.871
   },
   "frontend->currency": {
     "source": "frontend",
     "destination": "currency",
-    "p95_ms": 4.839,
-    "samples": 19,
-    "min_ms": 4.583,
-    "max_ms": 4.883,
-    "mean_ms": 4.804
+    "p95_ms": 0.914,
+    "samples": 13,
+    "min_ms": 0.892,
+    "max_ms": 0.998,
+    "mean_ms": 0.927
   },
   "frontend->product-catalog": {
     "source": "frontend",
     "destination": "product-catalog",
-    "p95_ms": 31.25,
-    "samples": 19,
-    "min_ms": 24.812,
-    "max_ms": 33.75,
-    "mean_ms": 30.588
+    "p95_ms": 13.917,
+    "samples": 13,
+    "min_ms": 9.817,
+    "max_ms": 16.553,
+    "mean_ms": 13.072
   },
   "frontend->recommendation": {
     "source": "frontend",
     "destination": "recommendation",
-    "p95_ms": 22.0,
-    "samples": 19,
-    "min_ms": 19.0,
-    "max_ms": 22.3,
-    "mean_ms": 21.568
+    "p95_ms": 8.356,
+    "samples": 13,
+    "min_ms": 6.202,
+    "max_ms": 9.06,
+    "mean_ms": 7.854
   },
   "frontend->shipping": {
     "source": "frontend",
     "destination": "shipping",
-    "p95_ms": 22.75,
-    "samples": 19,
-    "min_ms": 9.75,
-    "max_ms": 23.5,
-    "mean_ms": 20.053
+    "p95_ms": 4.99,
+    "samples": 13,
+    "min_ms": 4.929,
+    "max_ms": 6.313,
+    "mean_ms": 5.433
   },
-  "frontend-proxy->frontend": {
-    "source": "frontend-proxy",
-    "destination": "frontend",
-    "p95_ms": 82.292,
-    "samples": 20,
-    "min_ms": 9.75,
-    "max_ms": 550.0,
-    "mean_ms": 127.263
-  },
-  "frontend-proxy->image-provider": {
-    "source": "frontend-proxy",
-    "destination": "image-provider",
-    "p95_ms": 4.941,
-    "samples": 18,
-    "min_ms": 4.1,
-    "max_ms": 5.55,
-    "mean_ms": 4.98
-  },
-  "load-generator->frontend-proxy": {
+  "load-generator->frontend": {
     "source": "load-generator",
-    "destination": "frontend-proxy",
-    "p95_ms": 28541.044,
-    "samples": 20,
-    "min_ms": 28415.094,
-    "max_ms": 28611.354,
-    "mean_ms": 28524.271
+    "destination": "frontend",
+    "p95_ms": 16.749,
+    "samples": 13,
+    "min_ms": 15.833,
+    "max_ms": 17.305,
+    "mean_ms": 16.572
   },
   "recommendation->product-catalog": {
     "source": "recommendation",
     "destination": "product-catalog",
-    "p95_ms": 7.25,
-    "samples": 18,
-    "min_ms": 4.775,
-    "max_ms": 8.125,
-    "mean_ms": 6.965
+    "p95_ms": 4.124,
+    "samples": 13,
+    "min_ms": 3.686,
+    "max_ms": 4.43,
+    "mean_ms": 4.056
   },
   "shipping->quote": {
     "source": "shipping",
     "destination": "quote",
-    "p95_ms": 875.0,
-    "samples": 19,
-    "min_ms": 800.0,
-    "max_ms": 950.0,
-    "mean_ms": 888.816
+    "p95_ms": 0.981,
+    "samples": 13,
+    "min_ms": 0.964,
+    "max_ms": 1.0,
+    "mean_ms": 0.982
   }
 }
