@@ -13,7 +13,7 @@ import requests
 
 PROMETHEUS_URL = "http://localhost:9090"
 
-POLL_INTERVAL_SECONDS = 30
+POLL_INTERVAL_SECONDS = 60
 
 # Baseline learning
 BASELINE_LEARNING_DURATION_SECONDS = 600   # 10 minutes
@@ -57,7 +57,7 @@ histogram_quantile(
         destination_workload!="otel-collector-agent",
         source_workload!="flagd",
         destination_workload!="flagd"
-      }[10m]
+      }[5m]
     )
   )
 )
@@ -329,6 +329,10 @@ def get_latency_severity(
 
     if baseline <= 0:
         return None, baseline
+    
+    if latency_ms-baseline<=20.0:
+        return None, baseline
+
 
     if (
         latency_ms
@@ -360,7 +364,6 @@ def detect_latency_anomalies(
         source = edge_data["source"]
         destination = edge_data["destination"]
         latency_ms = edge_data["p95_ms"]
-
         severity, baseline = (
             get_latency_severity(
                 source,
