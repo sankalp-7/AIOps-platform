@@ -79,7 +79,9 @@ import pandas as pd
 import requests
 
 
-
+import json
+import os
+from typesafe_sdk import Choice, Score, Noul,TypeSafeClient
 
 
 PROMETHEUS_URL = "http://localhost:9090"
@@ -1903,6 +1905,33 @@ def build_jev_incident_state(
         "timeseries_evidence": same_evidence,
     }
 
+def run_jev(system_state):
+    client = TypeSafeClient()
+
+    response = client.system_one(
+        state=system_state,
+        questions={
+            "RCA": Choice(
+                instructions="Which service is the most likely originating root cause of the observed incident, based only on the provided system state?",
+                criteria={
+                    "ad": "The ad service is the originating root cause.",
+                    "cart": "The cart service is the originating root cause.",
+                    "checkout": "The checkout service is the originating root cause.",
+                    "currency": "The currency service is the originating root cause.",
+                    "email": "The email service is the originating root cause.",
+                    "frontend": "The frontend service is the originating root cause.",
+                    "image_provider": "The image-provider service is the originating root cause.",
+                    "payment": "The payment service is the originating root cause.",
+                    "product_catalog": "The product-catalog service is the originating root cause.",
+                    "quote": "The quote service is the originating root cause.",
+                    "recommendation": "The recommendation service is the originating root cause.",
+                    "shipping": "The shipping service is the originating root cause."
+                },
+            ),
+        },
+    )
+
+    print(response.answers["RCA"].probabilities)
 
 def main() -> None:
 
@@ -2124,14 +2153,8 @@ def main() -> None:
             f"AS={item['as_score']:.6f}"
 
         )
-
-
-
-    print(f"\nSaved {OUTPUT_GRAPH_FILE}")
-
-    print(f"Saved {OUTPUT_RANKING_FILE}")
-
-    print(f"Saved {JEV_STATE_FILE}")
+    print("\nJev ranking:")
+    run_jev(jev_state)
 
 
 
