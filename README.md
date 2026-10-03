@@ -12,7 +12,7 @@ https://github.com/user-attachments/assets/82ea74f3-5c7f-4428-9262-025e58309c99
 
 For any microservice-based application, the goal is to create an RCA engine that can deduce the root cause of a fault and suggest a possible fix.
 
-Modern systems are becoming increasingly complex, with most companies moving toward microservice-based architectures. While this enables faster development and deployment, diagnosing and fixing these systems when they fail still remains a painful process.
+Modern systems are becoming increasingly complex, with most companies moving toward microservice based architectures. While this enables faster development and deployment, diagnosing and fixing these systems when they fail still remains a painful process.
 
 There are several observability platforms that can alert engineers about which parts of an application are experiencing problems. However, reliably determining which specific service initiated the failure and why is still a difficult problem.
 
@@ -99,7 +99,7 @@ For context, while experimenting with JEV I used **187,731 tokens and the total 
 
 ---
 
-### Step 6: LLM-Based Explanation and Remediation
+### Step 6: LLM-Based Explanation and Remediation(TODO)
 
 After the ranking is completed, information from the **top three root-cause candidates** is collected.
 
