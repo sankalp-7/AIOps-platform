@@ -1,6 +1,6 @@
 # AIOps Platform
 
-A simple AIOps platform with an RCA engine built using a **System Dependency Graph (SDG)**.
+A simple AIOps platform with an RCA engine built using a **System Dependency Graph (SDG)**
 
 <img width="982" height="635" alt="Screenshot 2026-10-03 at 3 44 50 PM" src="https://github.com/user-attachments/assets/2795c932-67dd-427b-b63d-608955f1267a" />
 
