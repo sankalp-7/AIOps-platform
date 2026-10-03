@@ -1,4 +1,5 @@
+
 # AIOps-platform
 simple AIOps platform with an rca engine built using a system dependency graph
 
-![Planned architecture](SDG/arch01.png)
+<img width="982" height="635" alt="Screenshot 2026-10-03 at 3 44 50 PM" src="https://github.com/user-attachments/assets/2795c932-67dd-427b-b63d-608955f1267a" />
