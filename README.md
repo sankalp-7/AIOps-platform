@@ -112,7 +112,7 @@ Additional contextual information can also be included, such as:
 - Kubernetes events
 - Service dependency information
 
-This combined context is passed to an LLM to generate a more detailed explanation of the fault and suggest possible remediation steps.
+This combined context is passed to an LLM to generate a more detailed explanation of the fault and suggest possible remediation steps
 
 ---
 
