@@ -1,4 +1,4 @@
-Fault injected - 2s service delay on recommendation service using faults/inject-delay.sh
+Fault injected - 2s service delay on shipping service using faults/inject-delay.sh
 
 MicroRCA Ranking:
  1. frontend                  PPR=0.408060 AS=0.000000
