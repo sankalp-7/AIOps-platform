@@ -17,4 +17,5 @@ Jev ranking:
 {'ad': 0.67, 'cart': 0.0, 'checkout': 0.0, 'currency': 0.0, 'email': 0.0, 'frontend': 0.18, 'image_provider': 0.0, 'payment': 0.0, 'product_catalog': 0.0, 'quote': 0.0, 'recommendation': 0.15, 'shipping': 0.0}
 
 top-1: yes
+
 top-3: yes
