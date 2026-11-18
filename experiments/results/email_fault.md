@@ -1,28 +1,46 @@
-Fault injected - 2s service delay on email service using faults/inject-delay.sh
+# email fault
 
-MicroRCA ranking:
- 1. checkout                  PPR=0.369744 AS=0.094523
- 2. email                     PPR=0.315973 AS=0.295220
- 3. frontend                  PPR=0.314283 AS=0.000000
- 4. otel-collector-agent      PPR=0.000000 AS=0.000000
- 5. currency                  PPR=0.000000 AS=0.000000
- 6. cart                      PPR=0.000000 AS=0.000000
- 7. payment                   PPR=0.000000 AS=0.000000
- 8. product-catalog           PPR=0.000000 AS=0.000000
- 9. kafka                     PPR=0.000000 AS=0.000000
-10. shipping                  PPR=0.000000 AS=0.000000
-11. flagd                     PPR=0.000000 AS=0.000000
+**Fault injected:** 2s service delay on `email` service using `faults/inject-delay.sh`
 
-top-1: no
+## MicroRCA ranking
 
-top-3: yes
+| Rank | Service | PPR | AS |
+|-----:|---------|----:|---:|
+| 1 | checkout | 0.369744 | 0.094523 |
+| 2 | **email** | 0.315973 | 0.295220 |
+| 3 | frontend | 0.314283 | 0.000000 |
+| 4 | otel-collector-agent | 0.000000 | 0.000000 |
+| 5 | currency | 0.000000 | 0.000000 |
+| 6 | cart | 0.000000 | 0.000000 |
+| 7 | payment | 0.000000 | 0.000000 |
+| 8 | product-catalog | 0.000000 | 0.000000 |
+| 9 | kafka | 0.000000 | 0.000000 |
+| 10 | shipping | 0.000000 | 0.000000 |
+| 11 | flagd | 0.000000 | 0.000000 |
 
+| Metric | Result |
+|--------|:------:|
+| Top-1 | no |
+| Top-3 | yes |
 
+## Jev ranking
 
+| Rank | Service | Score |
+|-----:|---------|------:|
+| 1 | **email** | 0.38 |
+| 2 | shipping | 0.19 |
+| 3 | frontend | 0.17 |
+| 4 | recommendation | 0.13 |
+| 5 | checkout | 0.11 |
+| 6 | ad | 0.01 |
+| 7 | image_provider | 0.01 |
+| 8 | cart | 0.00 |
+| 9 | currency | 0.00 |
+| 10 | payment | 0.00 |
+| 11 | product_catalog | 0.00 |
+| 12 | quote | 0.00 |
 
-Jev ranking:
-{'ad': 0.01, 'cart': 0.0, 'checkout': 0.11, 'currency': 0.0, 'email': 0.38, 'frontend': 0.17, 'image_provider': 0.01, 'payment': 0.0, 'product_catalog': 0.0, 'quote': 0.0, 'recommendation': 0.13, 'shipping': 0.19}
-
-top-1: yes
-
-top-3: yes
+| Metric | Result |
+|--------|:------:|
+| Top-1 | yes |
+| Top-3 | yes |

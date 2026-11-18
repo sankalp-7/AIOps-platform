@@ -1,24 +1,45 @@
-Fault injected - 2s service delay on payment service using faults/inject-delay.sh
+# payment fault
 
-MicroRCA ranking:
- 1. checkout                  PPR=0.415582 AS=0.237126
- 2. frontend                  PPR=0.353245 AS=0.000000
- 3. payment                   PPR=0.231173 AS=0.250208
- 4. otel-collector-agent      PPR=0.000000 AS=0.000000
- 5. email                     PPR=0.000000 AS=0.000000
- 6. currency                  PPR=0.000000 AS=0.000000
- 7. cart                      PPR=0.000000 AS=0.000000
- 8. product-catalog           PPR=0.000000 AS=0.000000
- 9. kafka                     PPR=0.000000 AS=0.000000
-10. shipping                  PPR=0.000000 AS=0.000000
+**Fault injected:** 2s service delay on `payment` service using `faults/inject-delay.sh`
 
-top-1: no
+## MicroRCA ranking
 
-top-3: yes
+| Rank | Service | PPR | AS |
+|-----:|---------|----:|---:|
+| 1 | checkout | 0.415582 | 0.237126 |
+| 2 | frontend | 0.353245 | 0.000000 |
+| 3 | **payment** | 0.231173 | 0.250208 |
+| 4 | otel-collector-agent | 0.000000 | 0.000000 |
+| 5 | email | 0.000000 | 0.000000 |
+| 6 | currency | 0.000000 | 0.000000 |
+| 7 | cart | 0.000000 | 0.000000 |
+| 8 | product-catalog | 0.000000 | 0.000000 |
+| 9 | kafka | 0.000000 | 0.000000 |
+| 10 | shipping | 0.000000 | 0.000000 |
 
-Jev ranking:
-{'ad': 0.01, 'cart': 0.0, 'checkout': 0.13, 'currency': 0.01, 'email': 0.16, 'frontend': 0.16, 'image_provider': 0.0, 'payment': 0.4, 'product_catalog': 0.0, 'quote': 0.0, 'recommendation': 0.13, 'shipping': 0.0}
+| Metric | Result |
+|--------|:------:|
+| Top-1 | no |
+| Top-3 | yes |
 
-top-1: yes
+## Jev ranking
 
-top-3: yes
+| Rank | Service | Score |
+|-----:|---------|------:|
+| 1 | **payment** | 0.40 |
+| 2 | email | 0.16 |
+| 3 | frontend | 0.16 |
+| 4 | checkout | 0.13 |
+| 5 | recommendation | 0.13 |
+| 6 | ad | 0.01 |
+| 7 | currency | 0.01 |
+| 8 | cart | 0.00 |
+| 9 | image_provider | 0.00 |
+| 10 | product_catalog | 0.00 |
+| 11 | quote | 0.00 |
+| 12 | shipping | 0.00 |
+
+| Metric | Result |
+|--------|:------:|
+| Top-1 | yes |
+| Top-3 | yes |

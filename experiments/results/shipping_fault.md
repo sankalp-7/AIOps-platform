@@ -1,28 +1,47 @@
-Fault injected - 2s service delay on shipping service using faults/inject-delay.sh
+# shipping fault
 
-MicroRCA Ranking:
- 1. frontend                  PPR=0.408060 AS=0.000000
- 2. checkout                  PPR=0.392656 AS=0.607377
- 3. shipping                  PPR=0.199284 AS=0.406768
- 4. quote                     PPR=0.000000 AS=0.000000
- 5. otel-collector-agent      PPR=0.000000 AS=0.000000
- 6. flagd                     PPR=0.000000 AS=0.000000
- 7. email                     PPR=0.000000 AS=0.000000
- 8. currency                  PPR=0.000000 AS=0.000000
- 9. cart                      PPR=0.000000 AS=0.000000
-10. payment                   PPR=0.000000 AS=0.000000
-11. product-catalog           PPR=0.000000 AS=0.000000
-12. kafka                     PPR=0.000000 AS=0.000000
+**Fault injected:** 2s service delay on `shipping` service using `faults/inject-delay.sh`
 
-top-3: yes
+## MicroRCA ranking
 
-top-1: no
+| Rank | Service | PPR | AS |
+|-----:|---------|----:|---:|
+| 1 | frontend | 0.408060 | 0.000000 |
+| 2 | checkout | 0.392656 | 0.607377 |
+| 3 | **shipping** | 0.199284 | 0.406768 |
+| 4 | quote | 0.000000 | 0.000000 |
+| 5 | otel-collector-agent | 0.000000 | 0.000000 |
+| 6 | flagd | 0.000000 | 0.000000 |
+| 7 | email | 0.000000 | 0.000000 |
+| 8 | currency | 0.000000 | 0.000000 |
+| 9 | cart | 0.000000 | 0.000000 |
+| 10 | payment | 0.000000 | 0.000000 |
+| 11 | product-catalog | 0.000000 | 0.000000 |
+| 12 | kafka | 0.000000 | 0.000000 |
 
+| Metric | Result |
+|--------|:------:|
+| Top-1 | no |
+| Top-3 | yes |
 
+## Jev ranking
 
-Jev Ranking:
-{'ad': 0.0, 'cart': 0.0, 'checkout': 0.09, 'currency': 0.0, 'email': 0.0, 'frontend': 0.35, 'image_provider': 0.01, 'payment': 0.01, 'product_catalog': 0.0, 'quote': 0.01, 'recommendation': 0.12, 'shipping': 0.41}
+| Rank | Service | Score |
+|-----:|---------|------:|
+| 1 | **shipping** | 0.41 |
+| 2 | frontend | 0.35 |
+| 3 | recommendation | 0.12 |
+| 4 | checkout | 0.09 |
+| 5 | image_provider | 0.01 |
+| 6 | payment | 0.01 |
+| 7 | quote | 0.01 |
+| 8 | ad | 0.00 |
+| 9 | cart | 0.00 |
+| 10 | currency | 0.00 |
+| 11 | email | 0.00 |
+| 12 | product_catalog | 0.00 |
 
-top-3: yes
-
-top-1: yes
+| Metric | Result |
+|--------|:------:|
+| Top-1 | yes |
+| Top-3 | yes |

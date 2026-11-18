@@ -1,29 +1,47 @@
-Fault injected - 2s service delay on cart service using faults/inject-delay.sh
+# cart fault
 
-MicroRCA ranking:
- 1. frontend                  PPR=0.406357 AS=0.000000
- 2. checkout                  PPR=0.362492 AS=0.407778
- 3. cart                      PPR=0.231150 AS=0.356695
- 4. email                     PPR=0.000000 AS=0.000000
- 5. otel-collector-agent      PPR=0.000000 AS=0.000000
- 6. currency                  PPR=0.000000 AS=0.000000
- 7. payment                   PPR=0.000000 AS=0.000000
- 8. product-catalog           PPR=0.000000 AS=0.000000
- 9. kafka                     PPR=0.000000 AS=0.000000
-10. shipping                  PPR=0.000000 AS=0.000000
-11. valkey-cart               PPR=0.000000 AS=0.000000
-12. flagd                     PPR=0.000000 AS=0.000000
+**Fault injected:** 2s service delay on `cart` service using `faults/inject-delay.sh`
 
-top-1: no
+## MicroRCA ranking
 
-top-3: yes
+| Rank | Service | PPR | AS |
+|-----:|---------|----:|---:|
+| 1 | frontend | 0.406357 | 0.000000 |
+| 2 | checkout | 0.362492 | 0.407778 |
+| 3 | **cart** | 0.231150 | 0.356695 |
+| 4 | email | 0.000000 | 0.000000 |
+| 5 | otel-collector-agent | 0.000000 | 0.000000 |
+| 6 | currency | 0.000000 | 0.000000 |
+| 7 | payment | 0.000000 | 0.000000 |
+| 8 | product-catalog | 0.000000 | 0.000000 |
+| 9 | kafka | 0.000000 | 0.000000 |
+| 10 | shipping | 0.000000 | 0.000000 |
+| 11 | valkey-cart | 0.000000 | 0.000000 |
+| 12 | flagd | 0.000000 | 0.000000 |
 
+| Metric | Result |
+|--------|:------:|
+| Top-1 | no |
+| Top-3 | yes |
 
+## Jev ranking
 
+| Rank | Service | Score |
+|-----:|---------|------:|
+| 1 | **cart** | 0.66 |
+| 2 | recommendation | 0.19 |
+| 3 | frontend | 0.09 |
+| 4 | checkout | 0.05 |
+| 5 | ad | 0.01 |
+| 6 | currency | 0.00 |
+| 7 | email | 0.00 |
+| 8 | image_provider | 0.00 |
+| 9 | payment | 0.00 |
+| 10 | product_catalog | 0.00 |
+| 11 | quote | 0.00 |
+| 12 | shipping | 0.00 |
 
-Jev ranking:
-{'ad': 0.01, 'cart': 0.66, 'checkout': 0.05, 'currency': 0.0, 'email': 0.0, 'frontend': 0.09, 'image_provider': 0.0, 'payment': 0.0, 'product_catalog': 0.0, 'quote': 0.0, 'recommendation': 0.19, 'shipping': 0.0}
-
-top-1: yes
-
-top-3: yes
+| Metric | Result |
+|--------|:------:|
+| Top-1 | yes |
+| Top-3 | yes |

@@ -1,21 +1,40 @@
-Fault injected - 2s service delay on recommendation service using faults/inject-delay.sh
+# recommendation fault
 
-MicroRCA Ranking:
- 1. recommendation            PPR=0.540541 AS=0.328788
- 2. frontend                  PPR=0.459459 AS=0.000000
- 3. otel-collector-agent      PPR=0.000000 AS=0.000000
- 4. product-catalog           PPR=0.000000 AS=0.000000
- 5. flagd                     PPR=0.000000 AS=0.000000
+**Fault injected:** 2s service delay on `recommendation` service using `faults/inject-delay.sh`
 
-top-3: yes
+## MicroRCA ranking
 
-top-1: yes
+| Rank | Service | PPR | AS |
+|-----:|---------|----:|---:|
+| 1 | **recommendation** | 0.540541 | 0.328788 |
+| 2 | frontend | 0.459459 | 0.000000 |
+| 3 | otel-collector-agent | 0.000000 | 0.000000 |
+| 4 | product-catalog | 0.000000 | 0.000000 |
+| 5 | flagd | 0.000000 | 0.000000 |
 
+| Metric | Result |
+|--------|:------:|
+| Top-1 | yes |
+| Top-3 | yes |
 
+## Jev ranking
 
-Jev Ranking:
-{'ad': 0.0, 'cart': 0.0, 'checkout': 0.01, 'currency': 0.0, 'email': 0.0, 'frontend': 0.13, 'image_provider': 0.0, 'payment': 0.01, 'product_catalog': 0.01, 'quote': 0.0, 'recommendation': 0.84, 'shipping': 0.0}
+| Rank | Service | Score |
+|-----:|---------|------:|
+| 1 | **recommendation** | 0.84 |
+| 2 | frontend | 0.13 |
+| 3 | checkout | 0.01 |
+| 4 | payment | 0.01 |
+| 5 | product_catalog | 0.01 |
+| 6 | ad | 0.00 |
+| 7 | cart | 0.00 |
+| 8 | currency | 0.00 |
+| 9 | email | 0.00 |
+| 10 | image_provider | 0.00 |
+| 11 | quote | 0.00 |
+| 12 | shipping | 0.00 |
 
-top-3: yes
-
-top-1: yes
+| Metric | Result |
+|--------|:------:|
+| Top-1 | yes |
+| Top-3 | yes |

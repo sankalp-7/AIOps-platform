@@ -31,6 +31,19 @@ Outputs:
   * microrca_subgraph.json
 
   * rca_ranking.json
+  * jev_incident_state.json / jev_ranking.json (when Jev is configured)
+  * llm_incident_context.json - separate top-three evidence for an explanation LLM
+
+Trace setup:
+  kubectl -n otel-demo port-forward svc/jaeger 16686:16686
+  export JAEGER_URL=http://localhost:16686
+  export LLM_RANKER=microrca  # or jev, with TYPESAFE_API_KEY configured
+
+The collector probes the root, /jaeger, and /jaeger/ui query API paths.
+It uses Jaeger's internal /api JSON interface; newer API-only deployments may
+require an adapter. Traces never enter either ranker's input. The explanation
+LLM itself is not called. Application logs here remain container stdout/stderr;
+OTLP-only logs must be collected from their log backend separately.
 
 
 
@@ -81,7 +94,7 @@ import requests
 
 import json
 import os
-from typesafe_sdk import Choice, Score, Noul,TypeSafeClient
+# Jev SDK is imported only when Jev is called.
 
 
 PROMETHEUS_URL = "http://localhost:9090"
@@ -111,6 +124,16 @@ OUTPUT_RANKING_FILE = Path("rca_ranking.json")
 JEV_STATE_FILE = Path("jev_incident_state.json")
 
 MAX_LOG_LINES_PER_CONTAINER: int | None = 500
+
+# Jaeger query port, not the OTLP ingestion port (4317/4318).
+JAEGER_URL = os.environ.get("JAEGER_URL", "http://localhost:16686").rstrip("/")
+JAEGER_SEARCH_LIMIT = 10
+JAEGER_SLOW_MIN_DURATION = os.environ.get("JAEGER_SLOW_MIN_DURATION", "500ms")
+JAEGER_MAX_SPANS_PER_TRACE = 120
+JAEGER_MAX_EVENTS_PER_SPAN = 5
+LLM_RANKER = os.environ.get("LLM_RANKER", "microrca").lower()
+LLM_CONTEXT_FILE = Path("llm_incident_context.json")
+JEV_RANKING_FILE = Path("jev_ranking.json")
 
 
 
@@ -1607,6 +1630,7 @@ def collect_kubernetes_logs(
     services: set[str],
     start: float,
     *,
+    end: float | None = None,
     max_lines_per_container: int | None = MAX_LOG_LINES_PER_CONTAINER,
 ) -> dict[str, list[dict[str, Any]]]:
     """Collect application-container logs for the RCA incident window.
@@ -1620,6 +1644,7 @@ def collect_kubernetes_logs(
         check=True,
         capture_output=True,
         text=True,
+        timeout=30,
     )
     pod_payload = json.loads(pod_list.stdout)
 
@@ -1658,9 +1683,20 @@ def collect_kubernetes_logs(
                     check=False,
                     capture_output=True,
                     text=True,
+                    timeout=30,
                 )
 
                 lines = completed.stdout.splitlines()
+                excluded_lines = 0
+                if end is not None:
+                    bounded_lines = []
+                    for line in lines:
+                        stamp = _parse_k8s_timestamp(line.split(" ", 1)[0])
+                        if stamp is not None and start <= stamp <= end:
+                            bounded_lines.append(line)
+                        else:
+                            excluded_lines += 1
+                    lines = bounded_lines
                 truncated = False
 
                 if (
@@ -1675,6 +1711,7 @@ def collect_kubernetes_logs(
                     "container": container,
                     "lines": lines,
                     "truncated": truncated,
+                    "excluded_lines_outside_window_or_without_timestamp": excluded_lines,
                 }
 
                 if completed.returncode != 0:
@@ -1712,6 +1749,7 @@ def collect_kubernetes_events(
         check=True,
         capture_output=True,
         text=True,
+        timeout=30,
     )
     payload = json.loads(completed.stdout)
 
@@ -1744,7 +1782,7 @@ def collect_kubernetes_events(
         ]
 
         event_time = max(timestamps) if timestamps else None
-        if event_time is not None and not (start <= event_time <= end):
+        if event_time is None or not (start <= event_time <= end):
             continue
 
         events.append(
@@ -1779,13 +1817,10 @@ def build_jev_incident_state(
 ) -> dict[str, Any]:
     """Build a ground-truth-free incident state suitable for Jev.
 
-    The `same_evidence_as_microrca` section contains only evidence available
-    to MicroRCA before its correlation/weight/PageRank calculations.
-
-    Logs and Kubernetes events are placed in a separate section because the
-    current MicroRCA implementation does not use them. Feeding that section to
-    Jev is therefore an expanded-evidence experiment, not an apples-to-apples
-    comparison.
+    This is the existing ranker payload, without logs, events, or traces.
+    Post-ranking diagnostic evidence is saved separately for the explanation
+    LLM. Kiali response times/health remain in this original Jev payload;
+    MicroRCA does not use those fields as ranking features.
     """
     relevant_services = {
         node
@@ -1905,7 +1940,369 @@ def build_jev_incident_state(
         "timeseries_evidence": same_evidence,
     }
 
+def _jaeger_fields(items: list[dict[str, Any]], limit: int = 24) -> dict[str, Any]:
+    """Bound tag/event payloads; preserve ordinary operational evidence."""
+    output = {}
+    for item in items[:limit]:
+        key = str(item.get("key", ""))
+        if not key:
+            continue
+        value = item.get("value")
+        if isinstance(value, float) and not math.isfinite(value):
+            value = None
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value, default=str)
+        output[key] = value[:512] if isinstance(value, str) else value
+    return output
+
+
+def _jaeger_span_service(trace: dict[str, Any], span: dict[str, Any]) -> str:
+    process = span.get("process") or trace.get("processes", {}).get(span.get("processID"), {})
+    return str(process.get("serviceName", ""))
+
+
+def _jaeger_service_duration(
+    trace: dict[str, Any], service: str, start_us: int, end_us: int
+) -> int | None:
+    """Search/rank using the candidate's completed spans, not a long ancestor."""
+    durations = [
+        int(span["duration"])
+        for span in trace.get("spans", [])
+        if _jaeger_span_service(trace, span) == service
+        and isinstance(span.get("startTime"), (int, float))
+        and isinstance(span.get("duration"), (int, float))
+        and span["duration"] >= 0
+        and start_us <= span["startTime"] <= end_us
+        and span["startTime"] + span["duration"] <= end_us
+    ]
+    return max(durations) if durations else None
+
+
+def _compact_jaeger_trace(
+    trace: dict[str, Any], selected_services: set[str], start_us: int, end_us: int
+) -> dict[str, Any]:
+    """Keep a cross-service call tree, with explicit bounds and missing parents."""
+    raw_spans = trace.get("spans", [])
+    spans = [
+        span for span in raw_spans
+        if isinstance(span.get("startTime"), (int, float))
+        and isinstance(span.get("duration"), (int, float))
+        and span["duration"] >= 0
+        and span["startTime"] + span["duration"] <= end_us
+    ]
+    # Keep candidate spans and their ancestors first if a trace exceeds the cap.
+    by_id = {span.get("spanID"): span for span in spans}
+    priority = {
+        span.get("spanID") for span in spans
+        if _jaeger_span_service(trace, span) in selected_services
+        and span["startTime"] >= start_us
+    }
+    pending = list(priority)
+    while pending:
+        span = by_id.get(pending.pop(), {})
+        for reference in span.get("references", []):
+            if reference.get("traceID", trace.get("traceID")) != trace.get("traceID"):
+                continue
+            parent = reference.get("spanID")
+            if reference.get("refType") == "CHILD_OF" and parent in by_id and parent not in priority:
+                priority.add(parent)
+                pending.append(parent)
+    spans.sort(key=lambda span: (
+        span.get("spanID") not in priority,
+        -span["duration"], span["startTime"], str(span.get("spanID", "")),
+    ))
+    retained = spans[:JAEGER_MAX_SPANS_PER_TRACE]
+    retained.sort(key=lambda span: (span["startTime"], str(span.get("spanID", ""))))
+    retained_ids = {span.get("spanID") for span in retained}
+    output_spans = []
+    for span in retained:
+        events = [event for event in span.get("logs", [])
+                  if isinstance(event.get("timestamp"), (int, float))
+                  and event["timestamp"] <= end_us]
+        tags = span.get("tags", [])
+        output_spans.append({
+            "span_id": span.get("spanID"),
+            "service": _jaeger_span_service(trace, span),
+            "operation": span.get("operationName"),
+            "start_epoch": span["startTime"] / 1_000_000,
+            "duration_ms": span["duration"] / 1_000,
+            "starts_before_window": span["startTime"] < start_us,
+            "references": span.get("references", []),
+            "attributes": _jaeger_fields(tags),
+            "attributes_truncated": len(tags) > 24 or any(
+                len(str(tag.get("value", ""))) > 512 for tag in tags[:24]
+            ),
+            "span_events": [{
+                "timestamp_epoch": event["timestamp"] / 1_000_000,
+                "fields": _jaeger_fields(event.get("fields", [])),
+            } for event in events[:JAEGER_MAX_EVENTS_PER_SPAN]],
+            "span_events_truncated": len(events) > JAEGER_MAX_EVENTS_PER_SPAN,
+            "warnings": span.get("warnings") or [],
+        })
+    missing_parents = sorted({
+        reference.get("spanID")
+        for span in retained for reference in span.get("references", [])
+        if reference.get("refType") == "CHILD_OF"
+        and reference.get("traceID", trace.get("traceID")) == trace.get("traceID")
+        and reference.get("spanID") and reference.get("spanID") not in retained_ids
+    })
+    return {
+        "trace_id": trace.get("traceID"),
+        "services": sorted({span["service"] for span in output_spans}),
+        "spans_received": len(raw_spans),
+        "spans_included": len(retained),
+        "spans_omitted_after_cutoff_or_invalid": len(raw_spans) - len(spans),
+        "spans_omitted_by_cap": max(0, len(spans) - len(retained)),
+        "missing_parent_span_ids": missing_parents,
+        "warnings": trace.get("warnings") or [],
+        "spans": output_spans,
+    }
+
+
+def collect_jaeger_traces(
+    services: Iterable[str], start: float, end: float,
+) -> dict[str, Any]:
+    """Query Jaeger's UI HTTP API, not its OTLP ingestion endpoint.
+
+    Each candidate gets the same recent + slow search. Select two longer and
+    one shorter trace from the retrieved sample; shorter does not mean healthy.
+    The /api JSON contract is Jaeger's internal UI API (version dependent).
+    """
+    if not math.isfinite(start) or not math.isfinite(end) or start >= end:
+        raise ValueError("Trace collection requires finite start < end")
+    services = list(dict.fromkeys(str(service) for service in services))
+    start_us, end_us = int(start * 1_000_000), int(end * 1_000_000)
+    output: dict[str, Any] = {
+        "source": "jaeger_query_http_json",
+        "status": "ok",
+        "start_epoch": start,
+        "end_epoch": end,
+        "configuration": {
+            "query_url": JAEGER_URL,
+            "search_limit_per_service_per_query": JAEGER_SEARCH_LIMIT,
+            "slow_search_min_duration": JAEGER_SLOW_MIN_DURATION,
+            "max_traces_per_service": 3,
+            "max_spans_per_trace": JAEGER_MAX_SPANS_PER_TRACE,
+            "max_events_per_span": JAEGER_MAX_EVENTS_PER_SPAN,
+        },
+        "scope": (
+            "A selected-service span must start and finish within the incident window. "
+            "Retained traces include other services and earlier ancestors for context; "
+            "spans finishing after the cutoff are omitted. Search is by service.name, "
+            "not Kubernetes namespace. Sampling/export delays can leave evidence missing."
+        ),
+        "queries": [],
+        "errors": [],
+        "traces": [],
+    }
+    if not services:
+        output["status"] = "no_candidates"
+        return output
+    try:
+        service_map = json.loads(os.environ.get("JAEGER_SERVICE_MAP_JSON", "{}"))
+        if not isinstance(service_map, dict) or not all(
+            isinstance(k, str) and isinstance(v, str) for k, v in service_map.items()
+        ):
+            raise ValueError("JAEGER_SERVICE_MAP_JSON must be a JSON object of string names")
+    except (ValueError, TypeError) as exc:
+        output["status"] = "unavailable"
+        output["errors"].append(str(exc))
+        return output
+
+    with requests.Session() as session:
+        # OTel Demo versions use /, /jaeger, or /jaeger/ui as Jaeger's base path.
+        base = JAEGER_URL.rstrip("/")
+        api_candidates = list(dict.fromkeys([
+            base if base.endswith("/api") else base + "/api",
+            base + "/jaeger/api", base + "/jaeger/ui/api",
+        ]))
+        api_url = None
+        available_services: list[str] = []
+        probe_errors = []
+        for candidate in api_candidates:
+            try:
+                response = session.get(candidate + "/services", timeout=(3, 15))
+                response.raise_for_status()
+                payload = response.json()
+                names = payload.get("data") if isinstance(payload, dict) else None
+                if not isinstance(names, list) or not all(isinstance(name, str) for name in names):
+                    raise ValueError("Expected Jaeger /api/services JSON; received a different response")
+                if payload.get("errors"):
+                    raise ValueError(str(payload["errors"]))
+                api_url, available_services = candidate, names
+                break
+            except (requests.RequestException, ValueError) as exc:
+                probe_errors.append(f"{candidate}: {exc}")
+        if api_url is None:
+            output["status"] = "unavailable"
+            output["errors"] = probe_errors
+            return output
+        output["configuration"]["resolved_api_url"] = api_url
+
+        selected: dict[str, dict[str, Any]] = {}
+        successful_queries = 0
+        resolved_names: set[str] = set()
+        for workload in services:
+            explicit_name = service_map.get(workload)
+            matches = [name for name in available_services
+                       if name.replace("_", "-") == workload.replace("_", "-")]
+            service = explicit_name or (workload if workload in available_services
+                                        else matches[0] if len(matches) == 1 else None)
+            if service not in available_services:
+                output["errors"].append(
+                    f"No unique Jaeger service for {workload!r}; inspect /api/services "
+                    "and set JAEGER_SERVICE_MAP_JSON if needed."
+                )
+                continue
+            resolved_names.add(service)
+            pool: dict[str, dict[str, Any]] = {}
+            for mode in ("recent", "slow"):
+                params: dict[str, Any] = {
+                    "service": service, "start": start_us, "end": end_us,
+                    "limit": JAEGER_SEARCH_LIMIT,
+                }
+                if mode == "slow":
+                    params["minDuration"] = JAEGER_SLOW_MIN_DURATION
+                query_record: dict[str, Any] = {"workload": workload, "mode": mode, "params": params}
+                try:
+                    response = session.get(api_url + "/traces", params=params, timeout=(3, 20))
+                    response.raise_for_status()
+                    payload = response.json()
+                    data = payload.get("data") if isinstance(payload, dict) else None
+                    if not isinstance(data, list) or not all(isinstance(trace, dict) for trace in data):
+                        raise ValueError("Expected Jaeger /api/traces JSON with a data list")
+                    successful_queries += 1
+                    query_record["returned_count"] = len(data)
+                    query_record["search_limit_reached"] = len(data) >= JAEGER_SEARCH_LIMIT
+                    if payload.get("errors"):
+                        output["errors"].append(f"{workload}/{mode}: {payload['errors']}")
+                    # Defend the output bound even if the server ignores limit.
+                    for trace in data[:JAEGER_SEARCH_LIMIT]:
+                        trace_id = trace.get("traceID")
+                        if trace_id and _jaeger_service_duration(trace, service, start_us, end_us) is not None:
+                            pool[trace_id] = trace
+                except (requests.RequestException, ValueError, TypeError) as exc:
+                    query_record["error"] = str(exc)
+                    output["errors"].append(f"{workload}/{mode}: {exc}")
+                output["queries"].append(query_record)
+            ordered = sorted(pool.values(), key=lambda trace: (
+                -(_jaeger_service_duration(trace, service, start_us, end_us) or 0),
+                trace["traceID"],
+            ))
+            choices = [(trace, "longer_in_retrieved_sample") for trace in ordered[:2]]
+            if len(ordered) > 2:
+                choices.append((ordered[-1], "shorter_in_retrieved_sample"))
+            for trace, reason in choices:
+                entry = selected.setdefault(trace["traceID"], {"raw": trace, "selected_for": []})
+                entry["selected_for"].append({"workload": workload, "jaeger_service": service, "reason": reason})
+        for trace_id in sorted(selected):
+            entry = selected[trace_id]
+            compact = _compact_jaeger_trace(entry["raw"], resolved_names, start_us, end_us)
+            compact["selected_for"] = entry["selected_for"]
+            output["traces"].append(compact)
+        if output["errors"]:
+            output["status"] = "partial" if successful_queries else "unavailable"
+        elif not output["traces"]:
+            output["status"] = "no_traces"
+    return output
+
+
+def build_llm_incident_context(
+    ranking: list[dict[str, Any]], ranker: str,
+    full_graph: nx.DiGraph,
+    edge_response_times: dict[tuple[str, str], pd.Series],
+    container_metrics: dict[str, dict[str, pd.Series]],
+    service_to_pods: dict[str, list[str]], service_to_hosts: dict[str, set[str]],
+    start: float, end: float,
+) -> dict[str, Any]:
+    """Same post-ranking evidence rules for every fault; no LLM API call here."""
+    candidates = []
+    for item in ranking:
+        if item.get("service") and item["service"] not in {r["service"] for r in candidates}:
+            candidates.append(dict(item))
+        if len(candidates) == 3:
+            break
+    ordered_services = [item["service"] for item in candidates]
+    services = set(ordered_services)
+    context: dict[str, Any] = {
+        "schema_version": "1.0",
+        "namespace": NAMESPACE,
+        "incident_window": {"start_epoch": start, "end_epoch": end,
+                            "start_utc": _epoch_to_rfc3339(start), "end_utc": _epoch_to_rfc3339(end)},
+        "candidate_ranker": ranker,
+        "ranked_candidates": candidates,
+        "instructions": (
+            "Use the supplied observations to explain the likely cause and propagation. "
+            "Candidates are hypotheses, not ground truth. Cite trace/span IDs or log "
+            "timestamps. Distinguish observations from hypotheses; identify missing "
+            "evidence and abstain from an exact mechanism when unsupported."
+        ),
+        "dependency_edges": [
+            {"source": a, "destination": b}
+            for a, b, data in full_graph.edges(data=True)
+            if data.get("edge_type") == "service_call" and (a in services or b in services)
+        ],
+        "edge_latency_p95_ms": [
+            {"source": a, "destination": b, "series": series_to_points(series)}
+            for (a, b), series in edge_response_times.items() if a in services or b in services
+        ],
+        "service_resource_metrics": {},
+        "deployment_mapping": {
+            "service_to_pods": {s: service_to_pods.get(s, []) for s in ordered_services},
+            "service_to_hosts": {s: sorted(service_to_hosts.get(s, set())) for s in ordered_services},
+        },
+        "collection_errors": [],
+    }
+    resources = dict(container_metrics)
+    missing = services - resources.keys()
+    if missing:
+        try:
+            resources.update(fetch_container_metrics(service_to_pods, missing, start, end))
+        except (requests.RequestException, ValueError, RuntimeError) as exc:
+            context["collection_errors"].append(f"Additional candidate metrics: {exc}")
+    context["service_resource_metrics"] = {
+        service: {metric: series_to_points(series) for metric, series in resources.get(service, {}).items()}
+        for service in ordered_services
+    }
+    try:
+        logs = collect_kubernetes_logs(service_to_pods, services, start, end=end)
+        log_errors = [record["error"] for records in logs.values() for record in records if record.get("error")]
+        context["application_logs"] = {
+            "source": "kubectl_container_stdout_stderr",
+            "status": "partial" if log_errors else "ok",
+            "coverage_note": "Does not retrieve logs exported directly via OTLP to OpenSearch; empty output is not proof of no application logs.",
+            "by_service": logs,
+        }
+        context["collection_errors"].extend(log_errors)
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        context["application_logs"] = {"status": "unavailable", "error": str(exc)}
+        context["collection_errors"].append(f"Application logs: {exc}")
+    try:
+        events = collect_kubernetes_events(start, end)
+        pod_names = {pod for service in services for pod in service_to_pods.get(service, [])}
+        node_names = {node for service in services for node in service_to_hosts.get(service, set())}
+        relevant_events = []
+        for event in events:
+            obj = event["involved_object"]
+            name, kind = obj.get("name") or "", obj.get("kind")
+            if (kind == "Pod" and name in pod_names) or (kind == "Node" and name in node_names) or (
+                kind in {"Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Service"}
+                and any(name == service or name.startswith(service + "-") for service in services)
+            ):
+                relevant_events.append(event)
+        context["kubernetes_events"] = {
+            "status": "ok", "events": relevant_events[-100:], "truncated": len(relevant_events) > 100,
+        }
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        context["kubernetes_events"] = {"status": "unavailable", "error": str(exc)}
+        context["collection_errors"].append(f"Kubernetes events: {exc}")
+    context["traces"] = collect_jaeger_traces(ordered_services, start, end)
+    return context
+
+
 def run_jev(system_state):
+    from typesafe_sdk import Choice, TypeSafeClient
+
     client = TypeSafeClient()
 
     response = client.system_one(
@@ -1931,9 +2328,18 @@ def run_jev(system_state):
         },
     )
 
-    print(response.answers["RCA"].probabilities)
+    probabilities = response.answers["RCA"].probabilities
+    print(probabilities)
+    ranking = [
+        {"service": service.replace("_", "-"), "probability": float(probability)}
+        for service, probability in probabilities.items()
+        if math.isfinite(float(probability))
+    ]
+    return sorted(ranking, key=lambda item: (-item["probability"], item["service"]))
 
 def main() -> None:
+    if LLM_RANKER not in {"microrca", "jev"}:
+        raise ValueError("LLM_RANKER must be 'microrca' or 'jev'")
 
     if not KIALI_GRAPH_FILE.exists():
 
@@ -2153,8 +2559,34 @@ def main() -> None:
             f"AS={item['as_score']:.6f}"
 
         )
-    print("\nJev ranking:")
-    run_jev(jev_state)
+    jev_ranking = None
+    if os.environ.get("TYPESAFE_API_KEY"):
+        print("\nJev ranking:")
+        try:
+            jev_ranking = run_jev(jev_state)
+            save_json(JEV_RANKING_FILE, jev_ranking)
+        except Exception as exc:
+            print(f"WARNING: Jev ranking failed: {exc}")
+    else:
+        print("\nJev skipped: TYPESAFE_API_KEY is not set.")
+
+    selected_ranking = jev_ranking if LLM_RANKER == "jev" else ranking
+    if not selected_ranking:
+        raise RuntimeError(
+            f"No {LLM_RANKER} ranking available; no new LLM context was written. "
+            "For Jev, check TYPESAFE_API_KEY and the API response."
+        )
+    print(f"\nCollecting LLM evidence for the top three {LLM_RANKER} candidates...")
+    llm_context = build_llm_incident_context(
+        selected_ranking, LLM_RANKER, full_graph, edge_response_times,
+        container_metrics, service_to_pods, service_to_hosts, start, end,
+    )
+    save_json(LLM_CONTEXT_FILE, llm_context)
+    trace_evidence = llm_context["traces"]
+    print(f"Saved {LLM_CONTEXT_FILE}; Jaeger status={trace_evidence['status']}; "
+          f"traces={len(trace_evidence['traces'])}")
+    for error in trace_evidence["errors"] + llm_context["collection_errors"]:
+        print(f"WARNING: {error}")
 
 
 
